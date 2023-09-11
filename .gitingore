@@ -1,0 +1,48 @@
+# Dependencias de Node.js
+
+socket-proxy-client/node_modules/*
+socket-proxy-server/node_modules/*
+
+# Archivo de registro npm
+
+npm-debug.log
+
+# Archivo de registro Yarn
+
+yarn-error.log
+
+# Archivo de configuración local
+
+.env
+
+# Directorio de archivos generados por IDEs/editores
+
+.idea/
+.vscode/
+_.suo
+_.ntvs\*
+_.njsproj
+_.sln
+\*.sw?
+
+# Archivos de compilación
+
+_.log
+_.bak
+\*.tmp
+
+# Carpetas de archivos de prueba
+
+**tests**/
+test/
+tests/
+spec/
+specs/
+
+# Archivos de cobertura generados por herramientas de prueba
+
+coverage/
+
+# Archivos de registro
+
+\*.log

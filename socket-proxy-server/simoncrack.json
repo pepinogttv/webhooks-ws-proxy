@@ -1,0 +1,12 @@
+[
+  {
+    "path": "/producteca/test",
+    "method": "get",
+    "key": "producteca-webhook-test"
+  },
+  {
+    "path": "/mercadopago/notifications",
+    "method": "post",
+    "key": "mercadopago-notifications"
+  }
+]
