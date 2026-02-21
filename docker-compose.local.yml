@@ -3,7 +3,7 @@ services:
     build: ./socket-proxy-client
     container_name: webhook-proxy-client
     ports:
-      - "3001:3001"
+      - "3002:3001"
     environment:
       - SERVER_URL=${SERVER_URL}
       - API_SECRET=${API_SECRET}
