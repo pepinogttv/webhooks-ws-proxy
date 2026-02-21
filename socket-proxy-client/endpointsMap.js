@@ -1,40 +1,46 @@
 const fs = require("fs");
+const path = require("path");
+
+const DATA_FILE = path.join(__dirname, "data", "endpointsMap.json");
+
+function ensureDataFile() {
+  const dir = path.dirname(DATA_FILE);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+  if (!fs.existsSync(DATA_FILE)) {
+    fs.writeFileSync(DATA_FILE, "[]");
+  }
+}
 
 function get() {
-  return JSON.parse(fs.readFileSync("./endpointsMap.json"));
+  ensureDataFile();
+  return JSON.parse(fs.readFileSync(DATA_FILE, "utf-8"));
 }
 
 function set(endpoints) {
-  fs.writeFileSync("./endpointsMap.json", JSON.stringify(endpoints));
+  ensureDataFile();
+  fs.writeFileSync(DATA_FILE, JSON.stringify(endpoints, null, 2));
 }
 
 function getMap() {
   const maps = get();
-  const _map = maps.reduce((acc, map) => {
-    acc[map.path] = map.localPath;
+  return maps.reduce((acc, map) => {
+    acc[map.path] = map.localUrl;
     return acc;
   }, {});
-  console.log(_map);
-  return _map;
 }
 
-function createOrUpdate(path, localPath) {
-  console.log({ localPath, path });
+function createOrUpdate(webhookPath, localUrl) {
   const maps = get();
-  const existingMap = maps.find((map) => map.localPath === localPath);
+  const existing = maps.find((map) => map.path === webhookPath);
 
-  if (existingMap) {
-    existingMap.localPath = localPath;
+  if (existing) {
+    existing.localUrl = localUrl;
   } else {
-    maps.push({
-      localPath,
-      path,
-    });
+    maps.push({ localUrl, path: webhookPath });
   }
   set(maps);
 }
 
-module.exports = {
-  getMap,
-  createOrUpdate,
-};
+module.exports = { getMap, createOrUpdate };

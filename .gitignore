@@ -1,0 +1,29 @@
+# Dependencias
+node_modules/
+
+# Variables de entorno
+.env
+
+# Datos persistentes (generados en runtime)
+socket-proxy-server/data/
+socket-proxy-client/data/
+
+# Logs
+*.log
+npm-debug.log
+yarn-error.log
+
+# IDE
+.idea/
+.vscode/
+*.sw?
+
+# OS
+.DS_Store
+
+# Build
+*.bak
+*.tmp
+
+# Tests
+coverage/
