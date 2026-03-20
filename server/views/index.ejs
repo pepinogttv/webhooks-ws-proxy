@@ -117,6 +117,63 @@
       <p class="text-xs text-slate-500">Any POST/GET/PUT/DELETE to this URL will appear below in real-time.</p>
     </div>
 
+    <!-- How Forwarding Works (collapsible) -->
+    <div class="bg-slate-800/50 border border-slate-700/50 rounded-xl">
+      <details class="group">
+        <summary class="flex items-center gap-2 cursor-pointer px-5 py-4 text-sm font-semibold text-slate-300 uppercase tracking-wider select-none list-none hover:text-slate-100 transition-colors">
+          <svg class="w-4 h-4 text-slate-400 transition-transform duration-200 group-open:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+          </svg>
+          How does forwarding work?
+        </summary>
+        <div class="px-5 pb-5 space-y-5 text-sm text-slate-300 border-t border-slate-700/30">
+
+          <!-- Your Webhook URL -->
+          <div class="pt-4">
+            <h3 class="text-xs font-semibold text-slate-200 uppercase tracking-wider mb-2">Your Webhook URL</h3>
+            <p class="text-slate-400 mb-2">Your base URL is shown above. You can append any path when configuring webhooks in external services:</p>
+            <div class="bg-slate-900/50 rounded-lg p-3 font-mono text-xs text-emerald-400 space-y-1">
+              <div><span class="text-slate-500">{baseUrl}</span>chatwoot</div>
+              <div><span class="text-slate-500">{baseUrl}</span>mercadopago/notifications</div>
+              <div><span class="text-slate-500">{baseUrl}</span>stripe/events</div>
+              <div><span class="text-slate-500">{baseUrl}</span>anything/you/want</div>
+            </div>
+          </div>
+
+          <!-- Default Target -->
+          <div>
+            <h3 class="text-xs font-semibold text-slate-200 uppercase tracking-wider mb-2">Default Target <span class="normal-case text-slate-500 font-normal">(simplest setup)</span></h3>
+            <p class="text-slate-400 mb-2">Set a base URL like <code class="text-slate-300 bg-slate-900/50 px-1.5 py-0.5 rounded text-xs">http://localhost:4000</code>. All webhooks get forwarded there, preserving the original path:</p>
+            <div class="bg-slate-900/50 rounded-lg p-3 font-mono text-xs space-y-1">
+              <div><span class="text-slate-500">/w/{id}/</span><span class="text-slate-300">chatwoot</span> <span class="text-slate-500 mx-1">&rarr;</span> <span class="text-indigo-400">http://localhost:4000/chatwoot</span></div>
+              <div><span class="text-slate-500">/w/{id}/</span><span class="text-slate-300">stripe/events</span> <span class="text-slate-500 mx-1">&rarr;</span> <span class="text-indigo-400">http://localhost:4000/stripe/events</span></div>
+            </div>
+          </div>
+
+          <!-- Specific Rules -->
+          <div>
+            <h3 class="text-xs font-semibold text-slate-200 uppercase tracking-wider mb-2">Specific Rules <span class="normal-case text-slate-500 font-normal">(overrides)</span></h3>
+            <p class="text-slate-400 mb-2">When a webhook path needs to go somewhere different than what the Default Target would produce, add a specific rule:</p>
+            <div class="bg-slate-900/50 rounded-lg p-3 font-mono text-xs mb-2">
+              <div>Rule: <span class="text-slate-300">stripe/events</span> <span class="text-slate-500 mx-1">&rarr;</span> <span class="text-indigo-400">http://localhost:5000/webhooks/stripe</span></div>
+            </div>
+            <p class="text-slate-400">Now stripe goes to port 5000 while everything else still goes to the Default Target.</p>
+          </div>
+
+          <!-- Priority -->
+          <div class="bg-slate-900/50 rounded-lg p-3 flex items-center gap-2 text-xs">
+            <span class="font-semibold text-slate-200">Priority:</span>
+            <span class="text-indigo-400 font-medium">Specific Rule</span>
+            <span class="text-slate-500">&gt;</span>
+            <span class="text-emerald-400 font-medium">Default Target</span>
+            <span class="text-slate-500">&gt;</span>
+            <span class="text-slate-400 font-medium">Skip</span>
+          </div>
+
+        </div>
+      </details>
+    </div>
+
     <!-- Forwarding Rules -->
     <div class="bg-slate-800/50 border border-slate-700/50 rounded-xl p-5 space-y-4">
       <h2 class="text-sm font-semibold text-slate-300 uppercase tracking-wider">Forwarding Rules</h2>
