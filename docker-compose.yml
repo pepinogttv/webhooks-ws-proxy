@@ -1,14 +1,8 @@
 services:
   server:
-    build: ./socket-proxy-server
+    build: ./server
     ports:
-      - "3003:3003"
+      - "${PORT:-3000}:${PORT:-3000}"
     environment:
-      - API_SECRET=${API_SECRET}
-      - PORT=${PORT:-3003}
-    volumes:
-      - endpoints-data:/app/data
+      - PORT=${PORT:-3000}
     restart: unless-stopped
-
-volumes:
-  endpoints-data:

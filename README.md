@@ -1,202 +1,95 @@
-# Webhooks WS Proxy
+# Webhook Relay
 
-Proxy bidireccional de webhooks a traves de WebSockets. Recibe webhooks HTTP en un servidor remoto y los reenvia en tiempo real a servicios locales mediante Socket.IO, preservando headers, body y query params de la solicitud original.
+Free, zero-friction webhook forwarding to localhost. No installation, no registration — just open your browser.
+
+## How It Works
+
+1. Open the app in your browser
+2. You get a unique webhook URL automatically
+3. Point your external services (Stripe, MercadoPago, GitHub, etc.) to that URL
+4. Webhooks appear in real-time in your browser
+5. Configure forwarding rules to route webhooks to your local dev server
+
+The browser uses `fetch()` to forward webhooks directly to `localhost` — no CLI tool or local agent needed.
+
+## Architecture diagram (text-based)
 
 ```
-Servicio externo (ej. MercadoPago, Stripe)
-        |
-        | POST /webhooks/mercadopago/notifications
-        v
- +-----------------+         Socket.IO          +------------------+
- |     Server      | =========================> |     Client       |
- |  (Dokploy/VPS)  |    raw body + headers      |  (tu maquina)    |
- |   puerto 3000   |                            |   puerto 3001    |
- +-----------------+                            +------------------+
-                                                        |
-                                                        | POST (solicitud replicada)
-                                                        v
-                                                 Servicio local
-                                              (localhost:8080/api/...)
+External Service → POST /w/{channelId}/path → Server → Socket.IO → Browser → fetch() → localhost
 ```
 
-## Caracteristicas
+## Quick Start
 
-- **Forwarding fiel** - Preserva el body crudo (JSON, XML, binario, form-data), headers originales, query params y metodo HTTP
-- **CRUD de endpoints** - Crea, edita y elimina webhooks desde el dashboard del server
-- **Mapeo por endpoint** - Cada webhook se reenvia a una URL local diferente, configurable desde la UI del client
-- **Autenticacion** - API Secret compartido para Socket.IO, dashboards y API REST
-- **Dashboards** - UI con Tailwind CSS para server (sky blue) y client (emerald green)
-- **Dockerizado** - Docker Compose para deploy en Dokploy (server) y Docker Desktop (client)
-- **Reconexion automatica** - El client se reconecta al server si pierde la conexion
-- **Actualizacion en vivo** - Los endpoints creados en el server se propagan automaticamente al client
-
-## Requisitos
-
-- Node.js 18+
-- Docker (opcional, para produccion)
-
-## Inicio rapido
-
-### 1. Clonar y configurar
-
+### Local Development
 ```bash
-git clone https://github.com/tu-usuario/webhooks-ws-proxy.git
-cd webhooks-ws-proxy
+cd server
+npm install
+node index.js
+# Open http://localhost:3000
 ```
 
-Crear `.env` en cada subproyecto:
-
-**`socket-proxy-server/.env`**
-```env
-API_SECRET=un-secreto-seguro-compartido
-PORT=3000
-```
-
-**`socket-proxy-client/.env`**
-```env
-API_SECRET=un-secreto-seguro-compartido
-SERVER_URL=http://localhost:3000
-CLIENT_PORT=3001
-```
-
-### 2. Instalar dependencias
-
+### Docker
 ```bash
-cd socket-proxy-server && npm install
-cd ../socket-proxy-client && npm install
+docker-compose up --build
+# Open http://localhost:3000
 ```
 
-### 3. Ejecutar en desarrollo
+## Forwarding Rules
 
-En dos terminales:
+- **Default Target**: Set a base URL like `http://localhost:3000` — all webhooks will be forwarded preserving their original path
+- **Specific Rules**: Map individual webhook paths to specific local URLs
+  - Example: `mercadopago/notifications` → `http://localhost:8080/api/webhooks/mp`
 
-```bash
-# Terminal 1 - Server
-cd socket-proxy-server
-npm run dev
+All configuration is stored in your browser's localStorage.
+
+## Browser Compatibility
+
+| Browser | Forwarding to localhost | Notes |
+|---------|------------------------|-------|
+| Chrome | Yes | Shows one-time "Local Network Access" prompt |
+| Firefox | Yes | Works out of the box |
+| Edge | Yes | Same as Chrome |
+| Safari | No | Blocks mixed content to localhost |
+
+## Limitations
+
+- Browser tab must be open for forwarding to work
+- Some HTTP headers cannot be forwarded (Host, Cookie, Origin, Content-Length)
+- If your local service doesn't have CORS headers, webhooks are sent but the response is opaque (the request still arrives)
+- When the tab is closed, up to 50 webhooks are buffered for 30 minutes
+
+## For Best Results
+
+Add CORS headers to your local dev server. Example for Express.js:
+```javascript
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', '*');
+  res.header('Access-Control-Allow-Headers', '*');
+  next();
+});
 ```
 
-```bash
-# Terminal 2 - Client
-cd socket-proxy-client
-npm run dev
-```
+This allows the browser to read the full response from your local service.
 
-### 4. Configurar
+## Environment Variables
 
-1. Abrir el dashboard del **server** en `http://localhost:3000` e ingresar el API Secret
-2. Crear un endpoint (ej. path: `/mercadopago/notifications`, method: `POST`, key: `mp-notif`)
-3. Abrir la UI del **client** en `http://localhost:3001` e ingresar el API Secret
-4. Configurar la URL local de destino para el endpoint (ej. `http://localhost:8080/api/webhooks/mp`)
-5. Los webhooks enviados a `http://localhost:3000/webhooks/mercadopago/notifications` se reenviaran a `http://localhost:8080/api/webhooks/mp`
+| Variable | Default | Description |
+|----------|---------|-------------|
+| PORT | 3000 | Server port |
+| MAX_CHANNELS | 10000 | Max concurrent channels |
+| WEBHOOK_BUFFER_SIZE | 50 | Buffered webhooks per channel |
+| WEBHOOK_RATE_LIMIT | 60 | Max webhooks/min per channel |
+| CHANNEL_IDLE_TTL_HOURS | 24 | Hours before idle channel cleanup |
 
-### 5. Probar
+## Security
 
-```bash
-curl -X POST http://localhost:3000/webhooks/mercadopago/notifications \
-  -H "Content-Type: application/json" \
-  -d '{"type":"payment","data":{"id":"12345"}}'
-```
+- Each channel gets a cryptographically random UUID (122 bits of entropy)
+- No channel listing API — you must know the UUID to access a channel
+- No accounts, no passwords, no cookies
+- Webhook data is transient (in-memory only, not persisted)
+- Rate limited: 60 webhooks/min per channel
 
-## Deploy con Docker
+## License
 
-### Server (Dokploy / VPS)
-
-```bash
-docker compose up -d
-```
-
-Usa `docker-compose.yml`. El server corre en el puerto 3000. Los endpoints se persisten en un Docker volume.
-
-### Client (Docker Desktop local)
-
-Crear `.env` en la raiz con:
-
-```env
-SERVER_URL=https://tu-servidor.com
-API_SECRET=el-mismo-secreto-del-server
-```
-
-```bash
-docker compose -f docker-compose.local.yml up -d
-```
-
-El container `webhook-proxy-client` aparece en Docker Desktop para encenderlo/apagarlo. Usa `host.docker.internal` para acceder a servicios del host.
-
-## Variables de entorno
-
-| Variable | Donde | Requerida | Descripcion |
-|---|---|---|---|
-| `API_SECRET` | Server y Client | Si | Secret compartido para autenticacion |
-| `PORT` | Server | No | Puerto del server (default: `3000`) |
-| `SERVER_URL` | Client | Si | URL del server remoto |
-| `CLIENT_PORT` | Client | No | Puerto de la UI del client (default: `3001`) |
-
-## Estructura del proyecto
-
-```
-webhooks-ws-proxy/
-├── docker-compose.yml            # Deploy server (Dokploy)
-├── docker-compose.local.yml      # Deploy client (Docker Desktop)
-├── .env.example
-│
-├── socket-proxy-server/
-│   ├── Dockerfile
-│   ├── index.js                  # Express + Socket.IO server
-│   ├── auth.js                   # Middleware de autenticacion
-│   ├── endpoints.js              # CRUD de endpoints (JSON file)
-│   ├── views/
-│   │   ├── dashboard.ejs         # Dashboard de administracion
-│   │   └── login.ejs
-│   └── data/
-│       └── endpoints.json        # Endpoints registrados (runtime)
-│
-└── socket-proxy-client/
-    ├── Dockerfile
-    ├── index.js                  # Socket.IO client + forwarder
-    ├── endpointsMap.js           # Mapeo webhook -> URL local
-    ├── views/
-    │   ├── index.ejs             # UI de configuracion
-    │   └── login.ejs
-    └── data/
-        └── endpointsMap.json     # Mapeos guardados (runtime)
-```
-
-## API del Server
-
-Todas las rutas `/api/*` requieren autenticacion via session o header `x-api-secret`.
-
-| Metodo | Ruta | Descripcion |
-|---|---|---|
-| `GET` | `/api/endpoints` | Listar endpoints |
-| `POST` | `/api/endpoints` | Crear endpoint (`{ path, method, key }`) |
-| `PUT` | `/api/endpoints/:key` | Editar endpoint |
-| `DELETE` | `/api/endpoints/:key` | Eliminar endpoint |
-| `GET` | `/api/status` | Estado del server (clientes, actividad) |
-| `GET` | `/endpoints` | Listar endpoints (publico, usado por clients) |
-
-Los webhooks se reciben en `/webhooks{path}` segun los endpoints configurados.
-
-## Como funciona el forwarding
-
-1. Un servicio externo envia un HTTP request a `/webhooks/...` en el server
-2. El server captura el **body crudo como bytes** (via `express.raw`), headers, query params y metodo HTTP
-3. El body se codifica en **base64** y se emite via Socket.IO junto con todos los metadatos
-4. El client decodifica el base64 de vuelta a bytes exactos
-5. El client reenvia el request al servicio local usando **axios** con `transformRequest` para evitar cualquier modificacion del body
-6. Headers hop-by-hop (`host`, `connection`, `content-length`, `transfer-encoding`) se remueven automaticamente
-
-Esto garantiza que el servicio local recibe una solicitud practicamente identica a la original, sin importar el content-type (JSON, XML, form-data, binario, etc.).
-
-## Tech Stack
-
-- **Backend**: Node.js, Express.js
-- **WebSockets**: Socket.IO v4
-- **Templates**: EJS
-- **Styling**: Tailwind CSS (CDN)
-- **HTTP Client**: Axios
-- **Containers**: Docker, Docker Compose
-
-## Licencia
-
-ISC
+MIT
