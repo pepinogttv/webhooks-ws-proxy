@@ -73,7 +73,7 @@ The server never forwards webhooks directly to your machine. It holds them until
 cd server
 npm install
 node index.js
-# Open http://localhost:3000
+# Open http://localhost:3400
 ```
 
 For development with auto-reload:
@@ -81,14 +81,14 @@ For development with auto-reload:
 ```bash
 cd server
 npm run dev
-# Open http://localhost:3000
+# Open http://localhost:3400
 ```
 
 ### Docker
 
 ```bash
 docker-compose up --build
-# Open http://localhost:3000
+# Open http://localhost:3400
 ```
 
 ---
@@ -258,7 +258,7 @@ Each webhook payload is limited to 1MB. Webhooks exceeding this size are rejecte
 
 | Variable | Default | Description |
 |---|---|---|
-| `PORT` | `3000` | Port the server listens on |
+| `PORT` | `3400` | Port the server listens on |
 | `MAX_CHANNELS` | `10000` | Maximum number of concurrent channels |
 | `WEBHOOK_BUFFER_SIZE` | `50` | Maximum buffered webhooks per channel (delivered when a client reconnects) |
 | `WEBHOOK_RATE_LIMIT` | `60` | Maximum webhooks per minute per channel |
@@ -281,7 +281,7 @@ You can host your own instance of Webhook Relay. The setup is straightforward:
    docker-compose up --build
    ```
 
-3. Point your domain to the server (port 3000 by default, or configure via the `PORT` environment variable).
+3. Point your domain to the server (port 3400 by default, or configure via the `PORT` environment variable).
 
 4. That is it. Your instance is ready to use.
 

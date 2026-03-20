@@ -2,7 +2,7 @@ services:
   server:
     build: ./server
     ports:
-      - "${PORT:-3000}:${PORT:-3000}"
+      - "${PORT:-3400}:${PORT:-3400}"
     environment:
-      - PORT=${PORT:-3000}
+      - PORT=${PORT:-3400}
     restart: unless-stopped
