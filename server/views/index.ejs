@@ -472,6 +472,70 @@
     const MAX_LOG_ENTRIES = 200;
     let userScrolled = false;
 
+    // ─── Log Persistence (localStorage) ────────────────────────────────
+    const LOG_STORAGE_KEY = 'wsproxy:log:' + channelId;
+    let logEntries = []; // in-memory mirror of localStorage log
+
+    function saveLog() {
+      try {
+        localStorage.setItem(LOG_STORAGE_KEY, JSON.stringify(logEntries));
+      } catch (e) {
+        // localStorage full — evict oldest half and retry
+        logEntries = logEntries.slice(0, Math.floor(logEntries.length / 2));
+        try {
+          localStorage.setItem(LOG_STORAGE_KEY, JSON.stringify(logEntries));
+        } catch (e2) {
+          // give up silently
+        }
+      }
+    }
+
+    function loadLog() {
+      try {
+        var raw = localStorage.getItem(LOG_STORAGE_KEY);
+        return raw ? JSON.parse(raw) : [];
+      } catch (e) {
+        return [];
+      }
+    }
+
+    function addLogEntryToStore(webhook, status, statusMessage, targetUrl) {
+      logEntries.unshift({
+        id: webhook.id,
+        timestamp: webhook.timestamp,
+        method: webhook.method,
+        path: webhook.path,
+        headers: webhook.headers,
+        rawBodyBase64: webhook.rawBodyBase64,
+        query: webhook.query,
+        status: status || 'received',
+        statusMessage: statusMessage || 'received',
+        targetUrl: targetUrl || null,
+      });
+      // Enforce max cap
+      if (logEntries.length > MAX_LOG_ENTRIES) {
+        logEntries = logEntries.slice(0, MAX_LOG_ENTRIES);
+      }
+      saveLog();
+    }
+
+    var _restoringLog = false; // flag to skip localStorage writes during restore
+
+    function updateLogEntryInStore(webhookId, status, statusMessage, targetUrl) {
+      if (_restoringLog) return;
+      for (var i = 0; i < logEntries.length; i++) {
+        if (logEntries[i].id === webhookId) {
+          logEntries[i].status = status;
+          logEntries[i].statusMessage = statusMessage;
+          if (targetUrl !== undefined) {
+            logEntries[i].targetUrl = targetUrl;
+          }
+          break;
+        }
+      }
+      saveLog();
+    }
+
     const logContainer = document.getElementById('webhook-log');
     logContainer.addEventListener('scroll', function() {
       const atBottom = logContainer.scrollHeight - logContainer.scrollTop - logContainer.clientHeight < 40;
@@ -661,6 +725,11 @@
         logContainer.scrollTop = 0;
       }
 
+      // Persist to localStorage (skip for restored entries)
+      if (!webhook._restored) {
+        addLogEntryToStore(webhook, 'received', 'received', null);
+      }
+
       return entry;
     }
 
@@ -683,8 +752,10 @@
         msg.textContent = message || status;
       }
 
+      var targetUrl;
       if (status === 'forwarding' && forwardTarget) {
         forwardTarget.textContent = message || '';
+        targetUrl = message || '';
       }
 
       if (status === 'success' || status === 'sent-no-cors' || status === 'error' || status === 'skipped' || status === 'handled-other-tab' || status === 'error-other-tab') {
@@ -692,13 +763,21 @@
           forwardResult.textContent = message || status;
         }
       }
+
+      // Persist status update to localStorage
+      var webhookId = entry.dataset.webhookId;
+      if (webhookId) {
+        updateLogEntryInStore(webhookId, status, message || status, targetUrl);
+      }
     }
 
     function clearLog() {
       logContainer.innerHTML = '';
       logCount = 0;
+      logEntries = [];
       document.getElementById('log-count-badge').textContent = '0';
       document.getElementById('log-empty').classList.remove('hidden');
+      try { localStorage.removeItem(LOG_STORAGE_KEY); } catch (e) {}
     }
 
     // ─── Handle Webhook (core forwarding logic) ──────────────────────
@@ -799,6 +878,44 @@
 
       socket.emit('webhook:ack', { channelId: channelId, lastId: webhook.id });
     }
+
+    // ─── Restore Saved Log Entries ─────────────────────────────────────
+    (function restoreSavedLog() {
+      var saved = loadLog();
+      if (saved.length === 0) return;
+
+      _restoringLog = true;
+      logEntries = saved; // populate in-memory mirror
+
+      // Render entries from oldest to newest (they get inserted at top,
+      // so the newest will end up at the top of the list)
+      for (var i = saved.length - 1; i >= 0; i--) {
+        var s = saved[i];
+        // Mark as restored so addLogEntry skips the localStorage write
+        var webhookData = {
+          id: s.id,
+          timestamp: s.timestamp,
+          method: s.method,
+          path: s.path,
+          headers: s.headers,
+          rawBodyBase64: s.rawBodyBase64,
+          query: s.query,
+          _restored: true,
+        };
+        var entry = addLogEntry(webhookData);
+
+        // Apply saved status styling
+        if (s.status && s.status !== 'received') {
+          // Set forward target text if we have a targetUrl
+          if (s.targetUrl) {
+            var ft = entry.querySelector('[data-role="forward-target"]');
+            if (ft) ft.textContent = s.targetUrl;
+          }
+          updateEntryStatus(entry, s.status, s.statusMessage || s.status);
+        }
+      }
+      _restoringLog = false;
+    })();
 
     // ─── Clipboard ────────────────────────────────────────────────────
     function copyUrl() {
