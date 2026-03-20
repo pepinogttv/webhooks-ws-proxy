@@ -309,12 +309,6 @@ Why a CLI when the browser already works?
 
 The browser client remains the zero-friction default. The CLI is for power users and edge cases where the browser falls short.
 
-### Persistent Channels ($1/month)
-
-Free channels expire after 24 hours of inactivity. Every time you come back, you might get a new UUID and have to update your webhook URLs in every external service.
-
-For $1/month, your channel becomes permanent. Same UUID forever. Configure your webhooks once and never touch them again.
-
 ---
 
 ## License
