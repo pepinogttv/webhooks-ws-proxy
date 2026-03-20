@@ -289,6 +289,34 @@ For production, you will likely want to put a reverse proxy (nginx, Caddy, etc.)
 
 ---
 
+## Roadmap
+
+### CLI Client (`npx wrelay`)
+
+A lightweight terminal client that connects to the server via Socket.IO and forwards webhooks to localhost -- no browser needed.
+
+```bash
+npx wrelay --server https://webhookrelay.whitesai.com --channel abc-123-def --target http://localhost:4000
+```
+
+Why a CLI when the browser already works?
+
+- **No forbidden headers** -- Node.js can set Host, Cookie, Origin, Content-Length. Full HTTP fidelity.
+- **No CORS restrictions** -- your local service does not need CORS headers.
+- **No tab required** -- runs in the background, survives browser restarts.
+- **Works everywhere** -- including Safari users, SSH sessions, CI pipelines.
+- **~50 lines of code** -- minimal, zero-config, just connect and forward.
+
+The browser client remains the zero-friction default. The CLI is for power users and edge cases where the browser falls short.
+
+### Persistent Channels ($1/month)
+
+Free channels expire after 24 hours of inactivity. Every time you come back, you might get a new UUID and have to update your webhook URLs in every external service.
+
+For $1/month, your channel becomes permanent. Same UUID forever. Configure your webhooks once and never touch them again.
+
+---
+
 ## License
 
 MIT
