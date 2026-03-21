@@ -75,6 +75,29 @@ app.all('/w/:channelId/*', (req, res) => {
   res.status(200).json({ received: true, id: payload.id });
 });
 
+app.delete('/ch/:channelId', (req, res) => {
+  const { channelId } = req.params;
+  if (!UUID_V4_RE.test(channelId)) {
+    return res.status(400).json({ error: 'Invalid channel ID' });
+  }
+
+  channels.deleteChannel(channelId);
+
+  const room = `channel:${channelId}`;
+  io.to(room).emit('channel:invalidated');
+
+  // Make all sockets in the room leave
+  const roomSockets = io.sockets.adapter.rooms.get(room);
+  if (roomSockets) {
+    for (const socketId of roomSockets) {
+      const s = io.sockets.sockets.get(socketId);
+      if (s) s.leave(room);
+    }
+  }
+
+  res.status(200).json({ ok: true });
+});
+
 app.get('/health', (req, res) => {
   res.json({ ok: true });
 });

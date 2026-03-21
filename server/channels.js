@@ -122,6 +122,10 @@ function cleanup() {
   }
 }
 
+function deleteChannel(channelId) {
+  return channels.delete(channelId);
+}
+
 module.exports = {
   getOrCreate,
   bufferWebhook,
@@ -132,4 +136,5 @@ module.exports = {
   getStats,
   checkRateLimit,
   cleanup,
+  deleteChannel,
 };

@@ -92,9 +92,12 @@
             </button>
           </div>
         </div>
-        <div class="sm:pt-5">
+        <div class="sm:pt-5 flex items-center gap-2">
           <button onclick="newChannel()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-medium transition-colors whitespace-nowrap">
             New Channel
+          </button>
+          <button onclick="invalidateChannel()" class="px-3 py-2 bg-red-900/50 hover:bg-red-800/60 text-red-300 hover:text-red-200 border border-red-700/50 rounded-lg text-sm font-medium transition-colors whitespace-nowrap" title="Delete current channel and generate a new URL">
+            Reset
           </button>
         </div>
       </div>
@@ -941,6 +944,56 @@
       localStorage.setItem('wsproxy:channelId', channelId);
       window.location.href = '/ch/' + channelId;
     }
+
+    // ─── Channel Invalidation ──────────────────────────────────────────
+    function cleanupAndRedirect() {
+      var oldChannelId = channelId;
+
+      // Clear all localStorage keys for the current channel
+      localStorage.removeItem('wsproxy:channelId');
+      localStorage.removeItem('wsproxy:defaultTarget:' + oldChannelId);
+      localStorage.removeItem('wsproxy:mappings:' + oldChannelId);
+      localStorage.removeItem('wsproxy:log:' + oldChannelId);
+
+      // Close BroadcastChannel
+      if (bc) {
+        try { bc.close(); } catch (e) {}
+        bc = null;
+      }
+
+      // Disconnect socket
+      socket.disconnect();
+
+      // Generate new UUID and redirect
+      var newId = crypto.randomUUID();
+      localStorage.setItem('wsproxy:channelId', newId);
+      window.location.href = '/ch/' + newId;
+    }
+
+    function invalidateChannel() {
+      if (!confirm('Are you sure? This will generate a new webhook URL and delete all current data.')) {
+        return;
+      }
+
+      fetch('/ch/' + channelId, { method: 'DELETE' })
+        .catch(function() { /* ignore errors, proceed with cleanup */ })
+        .then(function() {
+          cleanupAndRedirect();
+        });
+    }
+
+    // Listen for invalidation from another tab or external source
+    socket.on('channel:invalidated', function() {
+      // Show a brief notification
+      var toast = document.createElement('div');
+      toast.className = 'fixed top-4 right-4 z-[100] bg-red-900/90 border border-red-700/50 text-red-200 px-4 py-3 rounded-lg shadow-lg text-sm';
+      toast.textContent = 'This channel has been invalidated. Redirecting to a new channel...';
+      document.body.appendChild(toast);
+
+      setTimeout(function() {
+        cleanupAndRedirect();
+      }, 1500);
+    });
   </script>
 </body>
 </html>
